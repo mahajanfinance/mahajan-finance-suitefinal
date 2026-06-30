@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Public+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 217 91% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 28 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --golden: 43 96% 56%;
+    --golden-foreground: 0 0% 10%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 40%;
+
+    --radius: 12px;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 1px 3px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0,0.05);
+    --shadow-3d: 0 6px 20px -4px rgba(0,0,0,0.12), 0 2px 8px -2px rgba(0,0,0,0.08);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.03em;
+  }
+}
+
+@layer components {
+  .btn-accent {
+    @apply bg-accent text-accent-foreground px-8 py-4 rounded-lg font-bold shadow-lg transition-all;
+    box-shadow: 0 4px 15px rgba(245, 130, 32, 0.3);
+  }
+  .btn-accent:hover {
+    filter: brightness(0.9);
+    box-shadow: 0 6px 25px rgba(245, 130, 32, 0.4);
+    transform: translateY(-1px);
+  }
+  .btn-accent:active {
+    transform: scale(0.95) translateY(0);
+  }
+
+  .service-card {
+    @apply bg-card border border-border p-6 rounded-xl hover:shadow-lg transition-all cursor-pointer;
+    box-shadow: var(--shadow-3d);
+  }
+  .service-card:hover {
+    border-color: hsl(var(--primary));
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  }
+
+  .card-3d {
+    @apply bg-card rounded-xl border-2 border-border transition-all duration-300;
+    box-shadow: var(--shadow-3d);
+  }
+  .card-3d:hover {
+    @apply border-golden;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+  }
+
+  .icon-3d {
+    @apply inline-flex items-center justify-center w-14 h-14 rounded-xl text-2xl transition-all duration-300;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--golden) / 0.15));
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .icon-3d:hover {
+    transform: scale(1.15) rotate(-5deg);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  }
+
+  .heading-3d {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    @apply transition-all duration-300;
+  }
+  .heading-3d:hover {
+    text-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    transform: scale(1.02);
+  }
+
+  .section-heading {
+    @apply text-3xl md:text-4xl font-extrabold tracking-tight text-foreground leading-tight;
+  }
+
+  .section-subheading {
+    @apply text-lg text-muted-foreground max-w-2xl;
+  }
+
+  .sticky-bar {
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border p-3 flex gap-3 md:hidden;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .glass-effect {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.85);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   SEARCH HIGHLIGHT ANIMATION
+   ═══════════════════════════════════════════════════════ */
+
+.search-highlight {
+  animation: searchGlow 2.5s ease-out;
+}
+
+@keyframes searchGlow {
+  0% {
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.6);
+    transform: scale(1.02);
+  }
+  30% {
+    box-shadow: 0 0 20px 4px rgba(212, 175, 55, 0.3);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    transform: scale(1);
+  }
+}

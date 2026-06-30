@@ -1,0 +1,436 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import {
+  Wallet, Home, Briefcase, Landmark, GraduationCap,
+  Bike, Car, HeartPulse, Truck,
+  FileText, Receipt, BarChart3,
+  CreditCard, UtensilsCrossed, FileCheck,
+  Coins, Tractor, Building, ShieldCheck, Users, Globe,
+  FileSpreadsheet, BookOpen, Scale, Award, Stamp, Send, Upload,
+  Calculator, Banknote, Shield, TrendingUp, LineChart, Landmark as Bank, Sparkles,
+  CheckCircle2, X, ChevronRight
+} from "lucide-react";
+import RazorpayButton from "./RazorpayButton";
+import { supabase } from "@/integrations/supabase/client";
+
+// CSC services with prices & required documents (EXACT ORIGINAL)
+const cscServices = [
+  {
+    icon: CreditCard, label: "PAN Card", price: 250,
+    docs: [
+      "Aadhaar Card",
+      "Mobile Number (linked with Aadhaar)",
+      "Any ONE Date of Birth Proof:",
+      "  Birth Certificate / School Leaving Certificate (SSC Marksheet)",
+      "  Voter ID Card / Passport / Matriculation Certificate"
+    ]
+  },
+  { icon: Stamp, label: "Shop Act License", price: 500, docs: ["Passport Photo", "PAN Card", "Aadhaar Card", "Business Photo", "Shop Address Proof (Light Bill / Rent Agreement)", "Business Name & Address", "Signature", "Email ID"] },
+  { icon: Receipt, label: "GST Registration", price: 1000, docs: ["Aadhaar Card", "PAN Card (Mandatory)", "Business Address Proof (Electricity Bill / Rent Agreement / NOC)", "Bank Passbook / Cancelled Cheque", "Photo", "Digital Signature (for companies)"] },
+  { icon: UtensilsCrossed, label: "Food License (FSSAI)", price: 1000, docs: ["Aadhaar Card", "PAN Card", "Passport Photo", "Business Address Proof", "Food Category Details", "Shop Photo", "NOC (if rented place)"] },
+  { icon: FileCheck, label: "Udyam / MSME", price: 300, docs: ["Aadhaar Card (Owner)", "PAN Card (Mandatory)", "Business Details", "Bank Account Details"] },
+  { icon: CreditCard, label: "Voter ID", price: 200, docs: ["Photo", "Aadhaar Card", "Mobile Number (linked with Aadhaar)"] },
+  { icon: Globe, label: "Passport", price: 3000, docs: ["Aadhaar Card", "Mobile Number (linked with Aadhaar)", "Date of Birth Proof", "Address Proof", "Passport Size Photos (2 nos.)"] },
+  { icon: FileCheck, label: "Life Certificate (Jeevan Pramaan)", price: 100, docs: ["Aadhaar Card", "Pension Account Details", "Mobile Number", "Biometric Authentication"] },
+  { icon: ShieldCheck, label: "Ayushman Card (PMJAY)", price: 100, docs: ["Aadhaar Card", "Mobile Number (linked with Aadhaar)", "Ration Card / SECC Data"] },
+  { icon: Users, label: "Pension Scheme", price: 0, docs: ["Aadhaar Card", "Bank Account", "Mobile Number", "Age Proof", "Occupation Details"] },
+];
+
+const services = [
+  { icon: Wallet, label: "Personal Loan", cat: "loans", link: "/apply-loan?type=personal" },
+  { icon: Briefcase, label: "Business Loan", cat: "loans", link: "/apply-loan?type=business" },
+  { icon: Calculator, label: "ABB Calculator", cat: "loans", link: "/banking-surrogate" },
+  { icon: Home, label: "Home Loan", cat: "loans", link: "/apply-loan?type=home" },
+  { icon: Landmark, label: "Loan Against Property", cat: "loans", link: "/apply-loan?type=lap" },
+  { icon: Car, label: "Vehicle Loan", cat: "loans", link: "/apply-loan?type=vehicle" },
+  { icon: Coins, label: "Gold Loan", cat: "loans", link: "/apply-loan?type=gold" },
+  { icon: GraduationCap, label: "Education Loan", cat: "loans", link: "/apply-loan?type=education" },
+  { icon: Tractor, label: "Agri / Tractor Loan", cat: "loans", link: "/apply-loan?type=agri" },
+  { icon: Truck, label: "Commercial Vehicle", cat: "loans", link: "/apply-loan?type=commercial" },
+  { icon: Building, label: "Construction Equip.", cat: "loans", link: "/apply-loan?type=construction" },
+  { icon: Users, label: "SHG Loan", cat: "loans", link: "/apply-loan?type=shg" },
+  { icon: Globe, label: "NRI Loan", cat: "loans", link: "/apply-loan?type=nri" },
+
+  { icon: Car, label: "Car Insurance", cat: "insurance", link: "/insurance" },
+  { icon: Bike, label: "Bike Insurance", cat: "insurance", link: "/insurance" },
+  { icon: Truck, label: "Commercial Vehicle", cat: "insurance", link: "/insurance" },
+  { icon: HeartPulse, label: "Health Insurance", cat: "insurance", link: "/insurance" },
+  { icon: ShieldCheck, label: "Personal Accident", cat: "insurance", link: "/insurance" },
+  { icon: Building, label: "Fire Insurance", cat: "insurance", link: "/insurance" },
+
+  { icon: FileText, label: "ITR Filing", cat: "accounting", link: "/accounting" },
+  { icon: Receipt, label: "GST Return Filing", cat: "accounting", link: "/accounting" },
+  { icon: BarChart3, label: "Project Reports", cat: "accounting", link: "/accounting" },
+  { icon: FileSpreadsheet, label: "Company Registration", cat: "accounting", link: "/accounting" },
+  { icon: BookOpen, label: "LLP Registration", cat: "accounting", link: "/accounting" },
+  { icon: Scale, label: "FPC Registration", cat: "accounting", link: "/accounting" },
+  { icon: Award, label: "Trust Registration", cat: "accounting", link: "/accounting" },
+
+  { icon: Coins, label: "SIP", cat: "investments", link: "/investments" },
+  { icon: BarChart3, label: "Mutual Funds", cat: "investments", link: "/investments" },
+  { icon: Landmark, label: "Fixed Deposits", cat: "investments", link: "/investments" },
+  { icon: Users, label: "Retirement Planning", cat: "investments", link: "/investments" },
+  { icon: ShieldCheck, label: "ULIP Plans", cat: "investments", link: "/investments" },
+  { icon: Award, label: "Child Future Plan", cat: "investments", link: "/investments" },
+
+  { icon: Tractor, label: "Agri Subsidy (2Cr @ 9%)", cat: "govt", link: "/govt-schemes" },
+  { icon: Building, label: "CMEGP (50 Lakh)", cat: "govt", link: "/govt-schemes" },
+  { icon: Award, label: "PM Awas Yojana", cat: "govt", link: "/govt-schemes" },
+  { icon: ShieldCheck, label: "PM Suraksha Bima", cat: "govt", link: "/govt-schemes" },
+  { icon: HeartPulse, label: "PM Jeevan Jyoti", cat: "govt", link: "/govt-schemes" },
+  { icon: Landmark, label: "Arthik Vikas Mahamandal", cat: "govt", link: "/govt-schemes" },
+];
+
+interface Props {
+  activeCategory?: string;
+  showHeading?: boolean;
+}
+
+const autoCapital = (v: string) => v.toUpperCase();
+const inputClass = "w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+};
+
+const CSCServiceCard = ({ service }: { service: typeof cscServices[0] }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [step, setStep] = useState<"form" | "payment" | "success">("form");
+  const [form, setForm] = useState({ name: "", mobile: "", city: "", email: "" });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setUploadedFiles(prev => [...prev, ...files]);
+      toast.success(`${files.length} file(s) added`);
+    }
+    // Reset input so the same file can be re-selected if removed
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleApply = () => {
+    if (!form.name || !form.mobile || !form.city) {
+      toast.error("Please fill Name, Mobile & City");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(form.mobile)) {
+      toast.error("Enter valid 10-digit mobile number");
+      return;
+    }
+    setStep("payment");
+  };
+
+  const sendLeadEmail = async (paymentId: string) => {
+    try {
+      const docNames = uploadedFiles.map(f => f.name).join(", ") || "Not uploaded";
+      await supabase.functions.invoke("send-enquiry-email", {
+        body: {
+          serviceName: "CSC Service - " + service.label,
+          customerName: form.name,
+          customerMobile: form.mobile,
+          paymentInfo: "Paid Rs." + service.price + " - Payment ID: " + paymentId,
+          details: {
+            City: form.city,
+            Email: form.email || "N/A",
+            Documents: docNames,
+          },
+        },
+      });
+    } catch (e) {
+      console.error("Lead email failed:", e);
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentId: string) => {
+    setSending(true);
+    try {
+      await sendLeadEmail(paymentId);
+    } catch (_) { /* email is best-effort */ }
+    setSending(false);
+    setStep("success");
+  };
+
+  const resetCard = () => {
+    setStep("form");
+    setForm({ name: "", mobile: "", city: "", email: "" });
+    setUploadedFiles([]);
+    setShowForm(false);
+  };
+
+  const stepIndicator = () => (
+    <div className="flex items-center justify-center gap-1 mb-3">
+      {(["form", "payment", "success"] as const).map((s, i) => {
+        const labels = ["Details", "Payment", "Done"];
+        const isActive = step === s;
+        const isDone = (s === "form" && step === "payment") || (s !== "success" && step === "success");
+        return (
+          <div key={s} className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all ${isActive ? "bg-primary text-primary-foreground" : isDone ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>
+              {isDone && s !== "success" ? <CheckCircle2 size={10} /> : <span>{i + 1}</span>}
+              {labels[i]}
+            </div>
+            {i < 2 && <ChevronRight size={10} className="text-muted-foreground" />}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="service-card flex flex-col items-center text-center group hover:shadow-xl hover:scale-105 hover:border-golden transition-all duration-200"
+    >
+      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-golden/20 group-hover:scale-110 transition-all">
+        <service.icon size={22} className="text-primary group-hover:text-golden transition-colors" />
+      </div>
+      <span className="font-semibold text-sm text-foreground leading-tight">{service.label}</span>
+      {service.price > 0 && <span className="text-xs font-bold text-golden mt-1">₹{service.price}</span>}
+      {!showForm && (
+        <button onClick={() => setShowForm(true)} className="text-[10px] text-accent font-semibold mt-1 group-hover:text-golden transition-colors">
+          Apply →
+        </button>
+      )}
+
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="w-full mt-3 overflow-hidden text-left"
+          >
+            {stepIndicator()}
+
+            {/* ── STEP 1: FORM ── */}
+            {step === "form" && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" value={form.name} onChange={e => setForm({ ...form, name: autoCapital(e.target.value) })} placeholder="FULL NAME *" className={inputClass} />
+                  <input type="tel" value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })} placeholder="MOBILE *" className={`${inputClass} tabular-nums`} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" value={form.city} onChange={e => setForm({ ...form, city: autoCapital(e.target.value) })} placeholder="CITY *" className={inputClass} />
+                  <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="EMAIL (optional)" className={inputClass} />
+                </div>
+
+                {/* Required Documents with Upload infront of each point */}
+                <div className="bg-muted/40 rounded-lg p-2.5 border border-border/50">
+                  <p className="text-xs font-bold text-foreground mb-1.5 flex items-center gap-1">
+                    <FileCheck size={12} className="text-golden" /> Required Documents:
+                  </p>
+                  <div className="space-y-1">
+                    {service.docs.map((d, i) => {
+                      const isSubItem = d.startsWith("  ");
+                      return (
+                        <div key={i} className="flex items-center justify-between gap-1.5">
+                          <span className={`text-[11px] min-w-0 flex-1 ${isSubItem ? "text-muted-foreground pl-3" : "text-foreground/80"}`}>
+                            {isSubItem ? "↳ " + d.trim() : "• " + d}
+                          </span>
+                          <label className="cursor-pointer p-1 rounded-md hover:bg-golden/10 text-slate-400 hover:text-golden transition-all shrink-0 border border-transparent hover:border-golden/30">
+                            <Upload size={10} />
+                            <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf" onChange={handleFileChange} />
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Bulk Document Upload Area */}
+                <label className="border-2 border-dashed border-border rounded-lg p-3 text-center hover:border-golden hover:bg-golden/5 transition-all cursor-pointer group/upload block">
+                  <input type="file" accept=".jpg,.jpeg,.png,.pdf" multiple className="hidden" onChange={handleFileChange} />
+                  <Upload size={18} className="mx-auto text-muted-foreground mb-1 group-hover/upload:text-golden transition-colors" />
+                  <p className="text-xs font-semibold text-muted-foreground group-hover/upload:text-golden transition-colors">
+                    Or click here to upload multiple
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">JPG, PNG, PDF accepted</p>
+                </label>
+
+                {/* Uploaded Files List */}
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-1">
+                    {uploadedFiles.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between bg-success/10 border border-success/20 rounded-lg px-2.5 py-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <FileCheck size={12} className="text-success shrink-0" />
+                          <span className="text-[11px] text-foreground truncate">{f.name}</span>
+                          <span className="text-[9px] text-muted-foreground shrink-0">({formatFileSize(f.size)})</span>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); removeFile(i); }} className="text-destructive hover:text-destructive/80 shrink-0 ml-1">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button onClick={handleApply} className="btn-accent w-full !py-2.5 text-xs rounded-lg flex items-center justify-center gap-1.5 font-semibold hover:scale-[1.02] transition-transform">
+                  <Send size={12} /> Proceed to Payment
+                </button>
+              </div>
+            )}
+
+            {/* ── STEP 2: PAYMENT ── */}
+            {step === "payment" && (
+              <div className="space-y-3">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
+                  <p className="text-sm font-bold text-foreground">{service.label}</p>
+                  <p className="text-2xl font-extrabold text-golden tabular-nums mt-1">₹{service.price}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Secure payment via Razorpay (UPI / Card / Netbanking)</p>
+                </div>
+                {service.price > 0 ? (
+                  <RazorpayButton
+                    amount={service.price}
+                    label={`Pay ₹${service.price} Securely`}
+                    description={`CSC Service - ${service.label}`}
+                    notes={{ service: service.label, name: form.name, mobile: form.mobile, city: form.city }}
+                    prefill={{ name: form.name, contact: form.mobile, email: form.email || undefined }}
+                    greetingMessage={`Your ${service.label} application is submitted! We will contact you within 24 hours.`}
+                    onSuccess={handlePaymentSuccess}
+                    className="btn-accent w-full !py-3 text-sm rounded-lg font-semibold"
+                  />
+                ) : (
+                  <button onClick={() => handlePaymentSuccess("FREE")} className="btn-accent w-full !py-3 text-sm rounded-lg font-semibold">
+                    Submit Free Application
+                  </button>
+                )}
+                <button onClick={() => setStep("form")} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1">
+                  ← Back to form
+                </button>
+              </div>
+            )}
+
+            {/* ── STEP 3: SUCCESS (Email Option Removed) ── */}
+            {step === "success" && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-3 text-center"
+              >
+                <div className="w-14 h-14 rounded-full bg-success/20 flex items-center justify-center mx-auto">
+                  <CheckCircle2 size={32} className="text-success" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Application Submitted!</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Thank you, <span className="font-semibold text-foreground">{form.name}</span>! Your <span className="font-semibold text-golden">{service.label}</span> application is received.
+                  </p>
+                </div>
+                {/* Email Option Removed Here */}
+                {uploadedFiles.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {uploadedFiles.length} document(s) attached: {uploadedFiles.map(f => f.name).join(", ")}
+                  </p>
+                )}
+                <p className="text-[11px] text-golden font-semibold">
+                  Our team will contact you within 24 hours on {form.mobile}.
+                </p>
+                <button onClick={resetCard} className="text-xs text-accent hover:text-golden transition-colors font-semibold">
+                  Apply for another service →
+                </button>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+const ServicesGrid = ({ activeCategory = "all", showHeading = true }: Props) => {
+  const catIcons: Record<string, any> = {
+    loans: Bank, insurance: Shield, investments: LineChart, accounting: BarChart3, csc: FileCheck, govt: Landmark,
+  };
+  const catLabels: Record<string, string> = {
+    loans: "Loans", insurance: "Insurance", investments: "Investments", accounting: "Accounting",
+    csc: "CSC Services – Authorized CSC Center", govt: "Govt Schemes",
+  };
+
+  const showCSC = activeCategory === "all" || activeCategory === "csc";
+  const nonCscItems = activeCategory === "all" ? services : services.filter(s => s.cat === activeCategory);
+  const nonCscGrouped = nonCscItems.filter(s => s.cat !== "csc" || activeCategory !== "all").reduce((acc, item) => {
+    if (item.cat === "csc") return acc;
+    if (!acc[item.cat]) acc[item.cat] = [];
+    acc[item.cat].push(item);
+    return acc;
+  }, {} as Record<string, typeof services>);
+
+  return (
+    <section className="py-12 bg-background">
+      <div className="container">
+        {showHeading && (
+          <div className="text-center mb-10">
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="section-heading hover:text-golden transition-colors cursor-default"
+            >
+              Complete Financial Solutions for Individuals & Businesses
+            </motion.h2>
+          </div>
+        )}
+
+        {Object.entries(nonCscGrouped).map(([cat, catItems]) => (
+          <div key={cat} className="mb-10">
+            <h3 className="text-xl font-bold font-display text-foreground mb-4 text-center hover:text-golden transition-colors cursor-default flex items-center justify-center gap-2">
+              {(() => { const I = catIcons[cat]; return I ? <I size={22} className="text-golden" /> : null; })()}
+              {catLabels[cat] || cat}
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {catItems.map((s, i) => (
+                <motion.div
+                  key={s.label + s.cat}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: i * 0.03, ease: [0.2, 0, 0, 1] }}
+                >
+                  <Link
+                    to={s.link}
+                    className="service-card flex flex-col items-center text-center group hover:shadow-xl hover:scale-105 hover:border-golden transition-all duration-200"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-golden/20 group-hover:scale-110 transition-all">
+                      <s.icon size={22} className="text-primary group-hover:text-golden transition-colors" />
+                    </div>
+                    <span className="font-semibold text-sm text-foreground leading-tight">{s.label}</span>
+                    <span className="text-[10px] text-accent font-semibold mt-1 group-hover:text-golden transition-colors">Apply →</span>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {showCSC && (
+          <div className="mb-10">
+            <h3 className="text-xl font-bold font-display text-foreground mb-2 text-center hover:text-golden transition-colors cursor-default flex items-center justify-center gap-2">
+              <FileCheck size={22} className="text-golden" />
+              {catLabels.csc}
+            </h3>
+            <p className="text-center text-sm text-muted-foreground mb-4">Fast & Trusted Service | Same Day Available | Secure Razorpay Payment</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {cscServices.map((s) => (
+                <CSCServiceCard key={s.label} service={s} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default ServicesGrid;

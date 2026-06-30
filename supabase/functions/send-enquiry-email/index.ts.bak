@@ -1,0 +1,153 @@
+import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+
+const ADMIN_EMAILS = ["info@mahajanfinance.com", "sandeepmahajan9@gmail.com"];
+const WHATSAPP_TO = "919730540215@c.us";
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, function(c) { return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]; });
+}
+
+function clamp(s, max) {
+  return String(s ?? "").slice(0, max);
+}
+
+function renderRows(details) {
+  return Object.entries(details)
+    .filter(function(e) { return e[1] !== undefined && e[1] !== null && e[1] !== ""; })
+    .map(function(e) { return "<tr><td style=\"padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;color:#0f172a;\">" + escapeHtml(clamp(e[0], 80)) + "</td><td style=\"padding:8px 12px;border:1px solid #e5e7eb;color:#334155;\">" + escapeHtml(clamp(String(e[1]), 500)) + "</td></tr>"; })
+    .join("");
+}
+
+async function sendWhatsAppNotification(message) {
+  var WHATSAPP_API_URL = Deno.env.get("WHATSAPP_API_URL");
+  if (!WHATSAPP_API_URL) {
+    return "SKIPPED: WHATSAPP_API_URL not configured";
+  }
+  try {
+    var resp = await fetch(WHATSAPP_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId: WHATSAPP_TO, message: message }),
+    });
+    var respText = await resp.text();
+    console.log("WhatsApp response:", resp.status, respText);
+    if (!resp.ok) {
+      return "ERROR " + resp.status + ": " + respText;
+    }
+    return "SENT OK: " + respText;
+  } catch (e) {
+    return "CATCH ERROR: " + e.message;
+  }
+}
+
+Deno.serve(async function(req) {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    var RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) {
+      return new Response(JSON.stringify({ error: "Email service unavailable" }), {
+        status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    var body = await req.json().catch(function() { return {}; });
+    var serviceName = clamp(body.serviceName, 120);
+    var customerName = clamp(body.customerName, 120);
+    var customerMobile = clamp(body.customerMobile, 20);
+    var paymentInfo = clamp(body.paymentInfo, 300);
+    var rawDetails = (body.details && typeof body.details === "object") ? body.details : {};
+
+    if (!serviceName || !customerName || !customerMobile) {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    var detailEntries = Object.entries(rawDetails).slice(0, 40);
+    var safeDetails = {};
+    for (var i = 0; i < detailEntries.length; i++) {
+      safeDetails[clamp(detailEntries[i][0], 80)] = clamp(String(detailEntries[i][1] ?? ""), 500);
+    }
+
+    var allDetails = Object.assign({
+      "Service": serviceName,
+      "Customer Name": customerName,
+      "Mobile": customerMobile,
+    }, safeDetails);
+    if (paymentInfo) allDetails["Payment Status"] = paymentInfo;
+    allDetails["Submitted At"] = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+    // Build attachments array
+    var attachments = [];
+    if (body.pdfBase64) {
+      attachments.push({ filename: body.pdfFilename || "Application.pdf", content: body.pdfBase64 });
+    }
+    if (body.documentAttachments && Array.isArray(body.documentAttachments)) {
+      for (var a = 0; a < body.documentAttachments.length; a++) {
+        var att = body.documentAttachments[a];
+        if (att.content && att.filename) {
+          attachments.push({ filename: att.filename, content: att.content });
+        }
+      }
+    }
+    console.log("Attachments:", attachments.length, attachments.map(function(x) { return x.filename; }).join(", "));
+
+    var attachInfo = "";
+    if (attachments.length > 0) {
+      attachInfo = "<p style=\"margin:18px 0 0;color:#059669;font-size:12px;font-weight:bold;\">Attached Files: " + attachments.map(function(x) { return x.filename; }).join(", ") + "</p>";
+    }
+
+    var html = "<!doctype html><html><body style=\"margin:0;padding:24px;font-family:Arial,sans-serif;background:#f3f4f6;\">"
+      + "<table style=\"max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);\">"
+      + "<tr><td style=\"background:#0a2540;color:#fbbf24;padding:18px 24px;font-size:20px;font-weight:bold;\">Mahajan Finance - New Enquiry</td></tr>"
+      + "<tr><td style=\"padding:20px 24px;\">"
+      + "<h2 style=\"margin:0 0 12px;color:#0a2540;font-size:18px;\">" + escapeHtml(serviceName) + "</h2>"
+      + "<table style=\"width:100%;border-collapse:collapse;font-size:14px;\">" + renderRows(allDetails) + "</table>"
+      + attachInfo
+      + "<p style=\"margin:18px 0 0;color:#64748b;font-size:12px;\">This is an automated notification.</p>"
+      + "</td></tr></table></body></html>";
+
+    var subjectLine = "New " + serviceName + " Enquiry - " + customerName;
+
+    function buildPayload(to) {
+      var p = {
+        from: "Mahajan Finance <onboarding@resend.dev>",
+        to: [to],
+        subject: subjectLine,
+        html: html,
+      };
+      if (attachments.length > 0) { p.attachments = attachments; }
+      return JSON.stringify(p);
+    }
+
+    var targetEmails = (body.priorityEmails && Array.isArray(body.priorityEmails)) ? body.priorityEmails : ADMIN_EMAILS;
+
+    var sends = await Promise.allSettled(targetEmails.map(function(to) {
+      return fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + RESEND_API_KEY },
+        body: buildPayload(to),
+      }).then(function(r) { return { ok: r.ok, status: r.status }; });
+    }));
+
+    var okCount = 0;
+    for (var j = 0; j < sends.length; j++) {
+      if (sends[j].status === "fulfilled" && sends[j].value.ok) okCount++;
+    }
+    console.log("Emails sent: " + okCount + "/" + targetEmails.length);
+
+    var detailLines = Object.entries(allDetails).map(function(e) { return "  " + e[0] + ": " + e[1]; }).join("\n");
+    var waMessage = "*New Mahajan Finance Enquiry*\n\n*Service:* " + serviceName + "\n*Name:* " + customerName + "\n*Mobile:* " + customerMobile + "\n\n*Details:*\n" + detailLines;
+    var waResult = await sendWhatsAppNotification(waMessage);
+
+    return new Response(JSON.stringify({ success: okCount > 0, delivered: okCount, whatsapp: waResult, attachments: attachments.length }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("Function error:", e);
+    return new Response(JSON.stringify({ error: "An internal error occurred" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
