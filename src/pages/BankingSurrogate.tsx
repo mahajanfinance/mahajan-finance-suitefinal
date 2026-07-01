@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+﻿import { useState, useRef, useCallback } from "react";
 import {
   type BankingReportData,
   type AdminSettings,
@@ -33,7 +33,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
 };
 
 /**
- * ⚠️ RAZORPAY KEY CONFIGURATION
+ * âš ï¸ RAZORPAY KEY CONFIGURATION
  * Replace with your actual Razorpay Key ID from https://dashboard.razorpay.com/#/access-keys
  * Example: "rzp_live_XXXXXXXXXXXX" (production) or "rzp_test_XXXXXXXXXXXX" (test mode)
  */
@@ -150,7 +150,7 @@ export default function BankingSurrogate() {
     // Check if Razorpay key is still placeholder
     if (!RAZORPAY_KEY || RAZORPAY_KEY === "YOUR_RAZORPAY_KEY" || RAZORPAY_KEY === "rzp_test_YourKeyHere") {
       alert(
-        "⚠️ Razorpay Not Configured\n\n" +
+        "âš ï¸ Razorpay Not Configured\n\n" +
         "To enable payments, please update the RAZORPAY_KEY in BankingSurrogate.tsx\n\n" +
         "Steps:\n" +
         "1. Go to https://dashboard.razorpay.com/#/access-keys\n" +
@@ -165,7 +165,7 @@ export default function BankingSurrogate() {
     // Check if Razorpay SDK is loaded
     if (typeof (window as any).Razorpay === "undefined") {
       alert(
-        "⚠️ Razorpay SDK Not Loaded\n\n" +
+        "âš ï¸ Razorpay SDK Not Loaded\n\n" +
         "Please add this script tag to your index.html inside <head>:\n\n" +
         '<script src="https://checkout.razorpay.com/v1/checkout.js"></script>'
       );
@@ -189,13 +189,13 @@ export default function BankingSurrogate() {
         if (reportData) {
           generateBankPdf(reportData, settings);
         }
-        alert("✅ Payment Successful!\nPayment ID: " + response.razorpay_payment_id + "\nYour Banking Report PDF is downloading...");
+        alert("âœ… Payment Successful!\nPayment ID: " + response.razorpay_payment_id + "\nYour Banking Report PDF is downloading...");
       },
     };
     try {
       const rzp = new (window as any).Razorpay(options);
       rzp.on("payment.failed", function (response: any) {
-        alert("❌ Payment failed: " + (response.error.description || "Unknown error"));
+        alert("âŒ Payment failed: " + (response.error.description || "Unknown error"));
       });
       rzp.open();
     } catch (err) {
@@ -222,7 +222,7 @@ export default function BankingSurrogate() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-blue-900 mb-2">Banking Surrogate Report</h1>
-          <p className="text-lg text-blue-600">Mahajan Finance — AI-Powered Banking Analysis</p>
+          <p className="text-lg text-blue-600">Mahajan Finance â€” AI-Powered Banking Analysis</p>
         </div>
 
         {/* Admin Settings */}
@@ -329,10 +329,10 @@ export default function BankingSurrogate() {
               </div>
               <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
                 <p className="text-sm text-amber-800">
-                  <span className="font-semibold">Selected:</span> {selectedPeriod.label} ABB @ {selectedPeriod.priceDisplay} —
+                  <span className="font-semibold">Selected:</span> {selectedPeriod.label} ABB @ {selectedPeriod.priceDisplay} â€”
                   ABB will be calculated using the <span className="font-bold">last {selectedPeriod.months} months</span> from your statement.
                   {reportData.totalMonthsFound < selectedPeriod.months && (
-                    <span className="text-red-600 font-semibold"> (Only {reportData.totalMonthsFound} months available in statement)</span>
+                    <span className="text-red-600 font-semibold"> (Statement covers {reportData.totalMonthsFound} active month(s). Upload statement with more activity for longer analysis.)</span>
                   )}
                 </p>
               </div>
@@ -657,7 +657,7 @@ export default function BankingSurrogate() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
-                Pay {selectedPeriod.priceDisplay} — {selectedPeriod.label} Report
+                Pay {selectedPeriod.priceDisplay} â€” {selectedPeriod.label} Report
               </button>
               <button
                 onClick={() => { setReportData(null); setFile(null); setError(null); setIsPaid(false); }}
@@ -672,3 +672,4 @@ export default function BankingSurrogate() {
     </div>
   );
 }
+
